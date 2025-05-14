@@ -56,3 +56,25 @@ class ContextSummary(models.Model):
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='context_summary')
     content = models.TextField()  # GPT가 참고할 핵심 요약 내용
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+# 일정(Event) 모델 - Parent(보호자) 기준
+class Event(models.Model):
+    parent = models.ForeignKey(
+        Parent,
+        on_delete=models.CASCADE,
+        related_name='events'
+    )
+    title = models.CharField(max_length=200)  # 일정 제목
+    description = models.TextField(blank=True)  # 상세 내용 (선택)
+    date = models.DateField()  # 날짜 (YYYY-MM-DD)
+    start_time = models.TimeField()  # 시작 시간 (예: 14:00)
+    end_time = models.TimeField()  # 종료 시간 (예: 15:00)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date', 'start_time']
+        unique_together = ('parent', 'date', 'start_time', 'title')  # 같은 시간 같은 제목 중복 방지
+
+    def __str__(self):
+        return f"{self.title} ({self.date} {self.start_time})"
