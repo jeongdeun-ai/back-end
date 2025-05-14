@@ -5,8 +5,14 @@ from django.contrib.auth.models import AbstractUser
 
 # 보호자 릴레이션
 class User(AbstractUser):
-    phone_number = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=20)
 
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'phone_number']  # username은 장고 기본 필수 필드
+
+    def __str__(self):
+        return f"{self.email} ({self.username})"
 
 # 어르신 릴레이션
 class Parent(models.Model):
