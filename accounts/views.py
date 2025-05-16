@@ -7,6 +7,7 @@ from table.models import *
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from django.db import IntegrityError
+from django.db import transaction
 
 # User 객체 혼자 회원가입 하는 코드
 class UserRegister_single_APIView(APIView):
@@ -48,3 +49,36 @@ def register_parent_late(request):
         return Response({'error':'데이터 저장 중 오류가 발생했습니다.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 회원가입할 때 아예 User 정보랑 Parent 정보 동시에 입력받고 연결까지 다 하는 API
+@api_view(['POST'])
+def register_user_and_parent_together(request):
+    data = request.data
+
+    try:
+        with transaction.atomic():  
+            # User 생성
+            user = User(
+                email=data.get('email'),
+                username=data.get('username'),
+                phone_number=data.get('phone_number'),
+            )
+            user.set_password(data.get('password'))
+            user.save()
+
+            # Parent 생성
+            parent = Parent.objects.create(
+                name=data.get('parent_name'),
+                birth_date=data.get('parent_birth_date'),
+                disease_info=data.get('parent_disease_info', ''),
+                medication_info=data.get('parent_medication_info', ''),
+                additional_notes=data.get('parent_additional_notes', ''),
+            )
+
+            # Relation 생성
+            UserParentRelation.objects.create(user=user, parent=parent)
+
+            return Response({'message': '회원가입 + 부모 등록 완료'}, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'error':str(e)}, status=status.HTTP_400_BAD_REQUEST)
