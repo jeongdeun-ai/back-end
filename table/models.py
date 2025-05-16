@@ -16,18 +16,39 @@ class User(AbstractUser):
 
 # 어르신 릴레이션
 class Parent(models.Model):
+    SEX_CHOICE = [
+        ('M', '남성'),
+        ('F', '여성'),
+    ]
+
     name = models.CharField(max_length=100)
     birth_date = models.DateField()
+    sex = models.CharField(max_length=1, choices=SEX_CHOICE) # 성별 정보
+    # photo = models.ImageField(upload_to='parent_photos/', blank=True, null=True) # 사진 저장할 속성
+    address = models.TextField(blank=True) # 어르신 주소
     disease_info = models.TextField(blank=True)
     medication_info = models.TextField(blank=True)
     additional_notes = models.TextField(blank=True)
 
 
+
+
 # 보호자와 어르신의 일대일 연결 관계 릴레이션
 class UserParentRelation(models.Model):
+
+    RELATION_CHOICES = [
+        ('son', '아들'),
+        ('daughter', '딸'),
+        ('grandchild', '손자/손녀'),
+        ('nephew', '조카'),
+        ('other', '기타'),
+    ]
+
     user = models.ForeignKey(User, related_name='user_parent_relation', on_delete=models.CASCADE)
     parent = models.ForeignKey(Parent, related_name='user_parent_relation', on_delete=models.CASCADE)
-
+    relation_type = models.CharField(max_length=20, choices=RELATION_CHOICES) 
+    ai_name_called = models.CharField(max_length=40)  # ai 부를 호칭
+    
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['user'], name='unique_user'),
@@ -36,6 +57,7 @@ class UserParentRelation(models.Model):
 
 # 채팅 기록 릴레이션
 class ChatLog(models.Model):
+
     parent = models.ForeignKey(Parent,related_name='chat_log', on_delete=models.CASCADE)
     sender = models.CharField(
         max_length=10,
@@ -66,16 +88,13 @@ class ContextSummary(models.Model):
 
 # 일정(Event) 모델 - Parent(보호자) 기준
 class Event(models.Model):
-    parent = models.ForeignKey(
-        Parent,
-        on_delete=models.CASCADE,
-        related_name='events'
-    )
+    parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='events')
+    
     title = models.CharField(max_length=200)  # 일정 제목
-    description = models.TextField(blank=True)  # 상세 내용 (선택)
+    # description = models.TextField(blank=True)  # 상세 내용 (선택)
     date = models.DateField()  # 날짜 (YYYY-MM-DD)
     start_time = models.TimeField()  # 시작 시간 (예: 14:00)
-    end_time = models.TimeField()  # 종료 시간 (예: 15:00)
+    # end_time = models.TimeField()  # 종료 시간 (예: 15:00)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
