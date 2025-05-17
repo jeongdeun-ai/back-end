@@ -9,6 +9,14 @@ from rest_framework.decorators import api_view, permission_classes
 from django.db import IntegrityError
 from django.db import transaction
 
+# Open AI API 사용하기 위한 header
+import os
+from dotenv import load_dotenv
+import openai
+
+load_dotenv()
+openai_api_key = os.getenv('OPENAI_API_KEY')
+
 # User 객체 혼자 회원가입 하는 코드
 class UserRegister_single_APIView(APIView):
     def post(self, request):
@@ -51,7 +59,7 @@ def register_parent_late(request):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# 회원가입할 때 아예 User 정보랑 Parent 정보 동시에 입력받고 연결까지 다 하는 API
+# 회원가입할 때 아예 User 정보랑 Parent 정보 동시에 입력받고 연결까지 다 하는 API (얘로 사용)
 @api_view(['POST'])
 def register_user_and_parent_together(request):
     data = request.data
@@ -71,14 +79,31 @@ def register_user_and_parent_together(request):
             parent = Parent.objects.create(
                 name=data.get('parent_name'),
                 birth_date=data.get('parent_birth_date'),
+                sex=data.get('parent_sex'),
+                address=data.get('parent_address', ''),
                 disease_info=data.get('parent_disease_info', ''),
                 medication_info=data.get('parent_medication_info', ''),
                 additional_notes=data.get('parent_additional_notes', ''),
             )
 
             # Relation 생성
-            UserParentRelation.objects.create(user=user, parent=parent)
+            UserParentRelation.objects.create(
+                user=user,
+                parent=parent,
+                relation_type=data.get('relation_type'),
+                ai_name_called=data.get('ai_name_called')
+            )
 
-            return Response({'message': '회원가입 + 부모 등록 완료'}, status=status.HTTP_201_CREATED)
+            # 💡 ContextSummary에 초기 프로필 등록
+            initial_context = f"{parent.name}님은 {parent.birth_date}생 {parent.get_sex_display()}이며, " \
+                              f"주요 질환은 {parent.disease_info}이며, 복용 중인 약은 {parent.medication_info}입니다. " \
+                              f"참고사항: {parent.additional_notes}"
+
+            ContextSummary.objects.create(
+                parent=parent,
+                content=initial_context
+            )
+
+            return Response({'message': '회원가입 + 부모 등록 + 초기 ContextSummary 저장 완료'}, status=status.HTTP_201_CREATED)
     except Exception as e:
-        return Response({'error':str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
