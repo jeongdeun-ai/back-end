@@ -21,11 +21,13 @@ openai_api_key = os.getenv('OPENAI_API_KEY')
 # gpt에게 Parent 객체의 핵심 정보를 넘겨주고 가장 적절한 질문 텍스트 받아오기!
 def generate_question_for_parent(parent):
     """
-    특정 Parent 정보를 기반으로 GPT가 질문 생성
+    Parent 객체의 가장 최신 ContextSummary 1개만 기반으로 GPT가 질문 생성
     """
-    # Parent context 기반 질문 생성 (ContextSummary 사용 가능)
-    context_list = parent.context_summary.order_by('-created_at')[:5]  # 최신 5개 context 참고 (원하면 더 늘려도 됨)
-    context_text = "\n".join([c.content for c in context_list])
+    try:
+        latest_context = parent.context_summary.latest('created_at')
+        context_text = latest_context.content
+    except ContextSummary.DoesNotExist:
+        context_text = "이전 대화 정보가 없습니다."
 
     system_prompt = f"""너는 치매 노인인 {parent.name} 님의 가상 자식 역할을 하는 AI야.
 이전에 대화한 주요 정보:
@@ -45,4 +47,3 @@ def generate_question_for_parent(parent):
 
     question = response['choices'][0]['message']['content']
     return question
-
