@@ -103,3 +103,30 @@ class Event(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.date} {self.start_time})"
+
+# Parent의 약 복용 스케쥴 DB
+class MedicationSchedule(models.Model): 
+    TIME_SLOT_CHOICES = [
+        ('morning', '아침'),
+        ('lunch', '점심'),
+        ('dinner', '저녁'),
+        ('before_sleep', '취침 전'),
+    ]
+
+    parent = models.ForeignKey(Parent, related_name='medication_schedule', on_delete=models.CASCADE)
+    time_slot = models.CharField(max_length=20, choices=TIME_SLOT_CHOICES)
+
+    class Meta:
+        unique_together = ('parent', 'time_slot')  # Parent 당 각 시간대 1개만 존재
+
+    def __str__(self):
+        return f"{self.parent.name} - {self.get_time_slot_display()}"
+
+
+class MedicationItem(models.Model):
+    medication_schedule = models.ForeignKey(MedicationSchedule, related_name='medication_item', on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    dose = models.CharField(max_length=50, blank=True)  # ex: 1정, 500mg
+
+    def __str__(self):
+        return f"{self.schedule} - {self.name} {self.dose}"
