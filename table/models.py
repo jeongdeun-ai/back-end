@@ -129,4 +129,4 @@ class MedicationItem(models.Model):
     dose = models.CharField(max_length=50, blank=True)  # ex: 1정, 500mg
 
     def __str__(self):
-        return f"{self.schedule} - {self.name} {self.dose}"
+        return f"{self.medication_schedule} - {self.name} {self.dose}"
