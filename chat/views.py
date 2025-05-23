@@ -126,14 +126,6 @@ def generate_reply_and_followup(parent, user_message):
     return response.choices[0].message.content
 
 
-
-# gpt의 질문에 대한 Parent 객체의 답변을 듣고 이거에 대한 답변을 다시 생성하는 함수
-
-
-
-
-
-
 # GPT가 질문 생성 → Parent에게 질문하는 View
 from django.utils.timezone import now
 
