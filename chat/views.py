@@ -126,7 +126,7 @@ def generate_reply_and_followup(parent, user_message):
     return response.choices[0].message.content
 
 
-# GPT가 질문 생성 → Parent에게 질문하는 View
+#1. GPT가 질문 생성 → Parent에게 질문하는 View
 from django.utils.timezone import now
 
 @api_view(['POST'])
@@ -175,7 +175,9 @@ def gpt_ask_parent(request):
         'is_first_today': is_first_today,
     }, status=status.HTTP_200_OK)
 
-# Parent가 GPT에게 답변 → 답변 저장 + 핵심 정보 저장 View
+
+
+#2. Parent가 GPT에게 답변 → 답변 저장 + 핵심 정보 저장 View
 @api_view(['POST'])
 def parent_reply_to_gpt(request):
     parent_id = request.data.get('parent_id')
