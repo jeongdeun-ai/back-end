@@ -43,6 +43,10 @@ INSTALLED_APPS = [
     'accounts',
     'chat',
     'myhome',
+    'question',
+    'record',
+    'schedule',
+    'home',
 ]
 
 MIDDLEWARE = [
