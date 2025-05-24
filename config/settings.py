@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'table',
     'accounts',
     'chat',
+    'myhome',
 ]
 
 MIDDLEWARE = [
