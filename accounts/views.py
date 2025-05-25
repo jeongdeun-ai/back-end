@@ -80,6 +80,7 @@ def register_user_and_parent_together(request):
                 name=data.get('parent_name'),
                 birth_date=data.get('parent_birth_date'),
                 sex=data.get('parent_sex'),
+                photo=data.get('parent_photo'),
                 address=data.get('parent_address', ''),
                 disease_info=data.get('parent_disease_info', ''),
                 medication_info=data.get('parent_medication_info', ''),
