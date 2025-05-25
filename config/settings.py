@@ -177,16 +177,9 @@ AWS_QUERYSTRING_AUTH = False  # 서명 URL 제거
 AWS_S3_ADDRESSING_STYLE = "virtual"
 AWS_S3_FILE_OVERWRITE = False
 
-# 핵심 설정 ✅
-AWS_S3_OBJECT_PARAMETERS = {
-    "ACL": "public-read"
-}
-AWS_DEFAULT_ACL = 'public-read'
+# # 핵심 설정 ✅
+# AWS_S3_OBJECT_PARAMETERS = {
+#     "ACL": "public-read"
+# }
+# AWS_DEFAULT_ACL = 'public-read'
 
-
-# import boto3
-# print("✅ boto3 확인:", boto3.__version__)
-# print("✅ DEFAULT_FILE_STORAGE 확인:", DEFAULT_FILE_STORAGE)
-
-print("✅ AWS_ACCESS_KEY_ID:", AWS_ACCESS_KEY_ID)
-print("✅ DEFAULT_FILE_STORAGE:", DEFAULT_FILE_STORAGE)

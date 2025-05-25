@@ -59,10 +59,23 @@ def register_parent_late(request):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+from storages.backends.s3boto3 import S3Boto3Storage\
 # 회원가입할 때 아예 User 정보랑 Parent 정보 동시에 입력받고 연결까지 다 하는 API (얘로 사용)
 @api_view(['POST'])
 def register_user_and_parent_together(request):
     data = request.data
+
+    print("✅ request.FILES:", request.FILES)
+
+    # 뷰 내부
+    s3_storage = S3Boto3Storage()
+
+    photo_file = request.FILES.get('parent_photo')
+    photo_name = photo_file.name
+
+    # 강제 S3 업로드 → 경로(파일명)를 반환함
+    photo_path_in_s3 = s3_storage.save(photo_name, photo_file)
+
 
     try:
         with transaction.atomic():  
@@ -80,7 +93,7 @@ def register_user_and_parent_together(request):
                 name=data.get('parent_name'),
                 birth_date=data.get('parent_birth_date'),
                 sex=data.get('parent_sex'),
-                photo=data.get('parent_photo'),
+                photo=photo_path_in_s3,  # ✅ 경로 문자열로 저장됨
                 address=data.get('parent_address', ''),
                 disease_info=data.get('parent_disease_info', ''),
                 medication_info=data.get('parent_medication_info', ''),
