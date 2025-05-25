@@ -17,6 +17,29 @@ import openai
 load_dotenv()
 openai_api_key = os.getenv('OPENAI_API_KEY')
 
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework import serializers
+# from .models import User
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        # 유저 정보도 함께 반환
+        data.update({
+            "username": self.user.username,
+            "email": self.user.email,
+            "phone_number": self.user.phone_number,
+        })
+
+        return data
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+
+
 # User 객체 혼자 회원가입 하는 코드
 class UserRegister_single_APIView(APIView):
     def post(self, request):
@@ -43,7 +66,7 @@ def register_parent_late(request):
         # Parent 객체 생성
         parent = Parent.objects.create(
             name = data.get('name'),
-            birth_data = data.get('birth_data'),
+            birth_date = data.get('birth_date'),
             disease_info = data.get("disease_info", ''),
             medication_info = data.get('medication_info', ''),
             additional_notes = data.get('additional_notes', ''),
@@ -59,7 +82,7 @@ def register_parent_late(request):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-from storages.backends.s3boto3 import S3Boto3Storage\
+from storages.backends.s3boto3 import S3Boto3Storage
 # 회원가입할 때 아예 User 정보랑 Parent 정보 동시에 입력받고 연결까지 다 하는 API (얘로 사용)
 @api_view(['POST'])
 def register_user_and_parent_together(request):

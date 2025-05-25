@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     # apps
     'table',
     'accounts',
@@ -55,6 +56,7 @@ MIDDLEWARE = [
     # 'whitenoise.middleware.WhiteNoiseMiddleware', ## 이거 추가!!
 ]
 
+# 인증 설정 추가
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',# 전역 설정!!
