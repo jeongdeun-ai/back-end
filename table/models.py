@@ -24,7 +24,7 @@ class Parent(models.Model):
     name = models.CharField(max_length=100)
     birth_date = models.DateField()
     sex = models.CharField(max_length=1, choices=SEX_CHOICE) # 성별 정보
-    # photo = models.ImageField(upload_to='parent_photos/', blank=True, null=True) # 사진 저장할 속성
+    photo = models.ImageField(upload_to='parent_photos/', blank=True, null=True)
     address = models.TextField(blank=True) # 어르신 주소
     disease_info = models.TextField(blank=True)
     medication_info = models.TextField(blank=True)
