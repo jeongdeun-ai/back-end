@@ -96,7 +96,8 @@ class Event(models.Model):
     start_time = models.TimeField()  # 시작 시간 (예: HH:MM:SS)
     end_time = models.TimeField(blank=True, null=True)  # 종료 시간 (예: HH:MM:SS)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
+    is_checked = models.BooleanField(default=False) # 일정 완료 여부 기본값 False
     class Meta:
         ordering = ['date', 'start_time']
         unique_together = ('parent', 'date', 'start_time', 'title')  # 같은 시간 같은 제목 중복 방지
