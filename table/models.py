@@ -67,7 +67,7 @@ class ChatLog(models.Model):
         ]
     )
     message = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(auto_now_add=True) # 여긴 연-월-일-시-분-초 다 포함되어있는 정보
 
 
 # 데일리 리포트 요약 릴레이션
