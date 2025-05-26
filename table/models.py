@@ -88,7 +88,7 @@ class ContextSummary(models.Model):
 
 # 일정(Event) 모델 - Parent(보호자) 기준
 class Event(models.Model):
-    parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='events')
+    parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='event')
     
     title = models.CharField(max_length=200)  # 일정 제목
     # description = models.TextField(blank=True)  # 상세 내용 (선택)
