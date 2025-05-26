@@ -94,7 +94,7 @@ class Event(models.Model):
     # description = models.TextField(blank=True)  # 상세 내용 (선택)
     date = models.DateField()  # 날짜 (YYYY-MM-DD)
     start_time = models.TimeField()  # 시작 시간 (예: HH:MM:SS)
-    end_time = models.TimeField()  # 종료 시간 (예: HH:MM:SS)
+    end_time = models.TimeField(blank=True, null=True)  # 종료 시간 (예: HH:MM:SS)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
