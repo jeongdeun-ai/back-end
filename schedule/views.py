@@ -25,7 +25,7 @@ import base64
 load_dotenv()
 openai_api_key = os.getenv('OPENAI_API_KEY')
 
-# 1번 보호자인 User가 Parent의 일정을 추가하는 API
+# 1번 - 보호자인 User가 Parent의 일정을 추가하는 API
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])  # 로그인 인증!
 def add_event_for_parent(request):
@@ -48,9 +48,30 @@ def add_event_for_parent(request):
             title = data.get('title'),
             date = data.get("date"),
             start_time = data.get("start_time"),
+            end_time = data.get("end_time"),
         )
 
         return Response({"message" : "새로운 일정이 추가되었습니다."}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 2번 - 프론트로부터 특정 날짜 파라미터로 전달 받고, 그 날 일정을 전부 GET으로 보내기
+@api_view(["GET"])
+@permission_classes([IsAuthenticated]) 
+def get_events_for_specific_date(request):
+    user = request.user
+    target_date = request.query_params.get('date')  # 예: '2025-05-27'
+
+    try:
+        relation = UserParentRelation.objects.get(user=user)
+        parent = relation.parent
+    except UserParentRelation.DoesNotExist:
+        return Response({"error":"등록된 어르신 정보가 없습니다."}, status=status.HTTP_404_NOT_FOUND)
     
+    events = Event.objects.filter(parent=parent, date=target_date).order_by('start_time')
+
+    serializer = GetEventsForSpecificDateSerializers(events, many=True)
+
+    return Response(serializer.data, status = status.HTTP_200_OK)
+
