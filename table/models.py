@@ -72,11 +72,23 @@ class ChatLog(models.Model):
 
 # 데일리 리포트 요약 릴레이션
 class DailyReport(models.Model):
+
+    EMOTION_CHOICES = [
+        ('happy', '행복'),
+        ('sad', '슬픔'),
+        ('anxious', '불안'),
+        ('angry', '분노'),
+        ('neutral', '보통'),
+    ]
+
     parent = models.ForeignKey(Parent, related_name='daily_report', on_delete=models.CASCADE)
     date = models.DateField()  # 예: 2025-05-09, 하루에 한 번 요약해서 저장
     summary = models.TextField()  # GPT 요약 결과
     created_at = models.DateTimeField(auto_now_add=True)
     is_sent = models.BooleanField(default=False)  # 보호자에게 발송 완료 여부
+    total_chat_time = models.IntegerField(default=0) # 총 대화 시간 (분 단위)
+    event_success_ratio = models.IntegerField(default=0) # 일정 수행률 (%)
+    parent_emotion = models.CharField(max_length=20, choices=EMOTION_CHOICES, default='neutral')
 
 
 # GPT API시 전달할 핵심 문맥 요약 릴레이션
