@@ -21,6 +21,8 @@ from datetime import datetime
 from django.http import HttpResponse
 import base64
 
+from datetime import date
+
 load_dotenv()
 openai_api_key = os.getenv('OPENAI_API_KEY')
 
@@ -95,6 +97,7 @@ def summarize_chat_logs(parent, target_date):
         print("요약 실패:", str(e))
         return None
 
+
 # 1번 뷰 - 특정 날짜를 프론트로부터 받아서 해당 날짜의 데일리 리포트 생성하기!
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -108,11 +111,14 @@ def get_target_date_record(request):
     except UserParentRelation.DoesNotExist:
         return Response({"error":"해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
 
-    # 1. 이미 발송된 리포트가 있으면 덮어쓰기 금지
+
+    # 1. 이미 발송된 리포트가 있으면 덮어쓰기 금지!!
     existing_report = DailyReport.objects.filter(parent=parent, date=target_date, is_sent=True).first()
     if existing_report:
-        return Response({"error": "이미 발송된 리포트는 수정할 수 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+        # # # 여기서 기존에 발송된 리포트가 있으면 그 객체를 반환!! 
+        serializer = DailyReportSerializers(existing_report)
 
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
     # target_date의 DailyReport 요약
@@ -153,6 +159,9 @@ def get_target_date_record(request):
         print("감정 분석 실패:", str(e))
         return Response({"error": "감정 분석 실패"}, status=status.HTTP_400_BAD_REQUEST)
     
+    # target_date가 today면 -> is_sent_flag = False
+    # target_date 가 today보다 이전 날이면 -> is_sent_flag = True
+    is_sent_flag = True if target_date < date.today() else False  # 이거 핵심!!
 
     # 6. 기존 리포트 삭제 후 새로 생성
     DailyReport.objects.filter(parent=parent, date=target_date).delete()
@@ -160,7 +169,7 @@ def get_target_date_record(request):
         parent=parent,
         date=target_date,
         summary=summarized_text,
-        is_sent=False,
+        is_sent=is_sent_flag,
         total_chat_time=total_chat_time,
         event_success_ratio=event_success_ratio,
         parent_emotion=emotion,
