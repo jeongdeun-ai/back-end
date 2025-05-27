@@ -184,3 +184,27 @@ def get_target_date_record(request):
     }, status=status.HTTP_201_CREATED)
 
   
+# 요약 레포트를 클릭했을 때 해당 target_date에 있었던 상세 페이지:모든 ChatLog 반환!
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_target_date_chat_logs(request):
+    user = request.user
+    target_date = request.query_params.get('date')  # 예: '2025-05-27'
+
+    # 해당 User의 realtion과 대응되는 어르신 객체 불러오기
+    try:
+        relation = UserParentRelation.objects.get(user=user)
+        parent = relation.parent
+    except UserParentRelation.DoesNotExist:
+        return Response({"error":"해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # 해당 날짜의 모든 대화 로그 정렬해서 가져오기
+    all_chat_logs = ChatLog.objects.filter(
+        parent=parent,
+        timestamp__date=target_date
+    ).order_by('timestamp') #  가장 오래된 대화(=가장 먼저 한 대화) 가 맨 위에 옴
+    
+    # 시리얼라이저로 전처리
+    serializer = ChatLogSerializers(all_chat_logs, many=True)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)

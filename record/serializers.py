@@ -5,5 +5,10 @@ from table.models import *
 class DailyReportSerializers(serializers.ModelSerializer):
     class Meta:
         model = DailyReport
-        fileds = "__all__"
+        fields = "__all__"
 
+
+class ChatLogSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = ChatLog
+        fields = "__all__"
