@@ -24,6 +24,9 @@ import base64
 load_dotenv()
 openai_api_key = os.getenv('OPENAI_API_KEY')
 
+
+# 이 페이지에 있는 wav 내용을 mp3로 꼭 바꾸기!!
+
 # gpt에게 Parent 객체의 핵심 정보를 넘겨주고 가장 적절한 질문 텍스트 생성하는 함수
 def generate_initial_question(parent):
     """
@@ -132,14 +135,13 @@ from django.utils.timezone import now
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def gpt_ask_parent(request):
-    parent_id = request.data.get('parent_id')
-
-    if not parent_id:
-        return Response({'error': 'parent_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    # parent_id = request.data.get('parent_id')
+    user = request.user
 
     try:
-        parent = Parent.objects.get(id=parent_id)
-    except Parent.DoesNotExist:
+        relation = UserParentRelation.objects.get(user = user)
+        parent = relation.parent
+    except UserParentRelation.DoesNotExist:
         return Response({'error': 'Parent not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     today = now().date()
@@ -159,13 +161,13 @@ def gpt_ask_parent(request):
     # GPT 발화 저장
     ChatLog.objects.create(parent=parent, sender='gpt', message=question_text)
 
-    # TTS 변환 (OpenAI WAV)
+    # TTS 변환 (OpenAI mp3)
     client = openai.OpenAI(api_key=openai_api_key)
     tts_response = client.audio.speech.create(
         model="tts-1",
         voice="nova",
         input=question_text,
-        response_format="wav",
+        response_format="mp3",
     )
     audio_content = tts_response.read()
     encoded_audio = base64.b64encode(audio_content).decode('utf-8')
@@ -179,19 +181,17 @@ def gpt_ask_parent(request):
 
 
 #2. Parent가 GPT에게 답변 → 답변 저장 + 핵심 정보 저장 View
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def parent_reply_to_gpt(request):
-    parent_id = request.data.get('parent_id')
+    
+    user = request.user
     audio_base64 = request.data.get('audio_base64')
 
-    if not parent_id or not audio_base64:
-        return Response({'error': "parent_id and audio_base64 are required."}, status=status.HTTP_400_BAD_REQUEST)
-
     try:
-        parent = Parent.objects.get(id=parent_id)
-    except Parent.DoesNotExist:
+        relation = UserParentRelation.objects.get(user = user)
+        parent = relation.parent
+    except UserParentRelation.DoesNotExist:
         return Response({'error': 'Parent not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     # 1. base64 → 바이너리 변환
@@ -205,7 +205,7 @@ def parent_reply_to_gpt(request):
 
     from io import BytesIO
     audio_file = BytesIO(audio_bytes)
-    audio_file.name = 'voice.wav'  # 파일 이름은 필수 (확장자 포함)
+    audio_file.name = 'voice.mp3'  # 파일 이름은 필수 (확장자 포함)
 
     try:
         transcript_response = client.audio.transcriptions.create(
@@ -255,17 +255,14 @@ def parent_reply_to_gpt(request):
     summary_text = response.choices[0].message.content.strip()
 
     # 5. ContextSummary 저장 (기존에 있으면 이어쓰기)
-    try:
-        latest_context = ContextSummary.objects.filter(parent=parent).latest('created_at')
-        updated_content = f"{latest_context.content.strip()}\n\n{summary_text}"
-        latest_context.content = updated_content
-        latest_context.created_at = now()  # 타임스탬프 갱신 (선택)
+    latest_context = ContextSummary.objects.filter(parent=parent).order_by('-created_at').first()
+    if latest_context:
+        latest_context.content = f"{latest_context.content.strip()}\n\n{summary_text}"
+        latest_context.created_at = now()
         latest_context.save()
-    except ContextSummary.DoesNotExist:
+    else:
         ContextSummary.objects.create(parent=parent, content=summary_text)
 
     # 6. 응답 반환
-    return Response({
-        'transcript': user_message,
-        'summary': summary_text,
-    }, status=status.HTTP_200_OK)
+    return Response({"message": "응답이 정상적으로 저장되었습니다."}, status=status.HTTP_200_OK)
+
