@@ -143,3 +143,28 @@ class MedicationItem(models.Model):
 
     def __str__(self):
         return f"{self.medication_schedule} - {self.name} {self.dose}"
+
+
+class Question(models.Model):
+    SUBJECT_CHOICES = [
+        ('main', '메인'),
+        ('mood', '기분'),
+        ('food', '식사'),
+        ('pill', '약'),
+        ('memory', '추억'),
+    ]
+    
+    parent = models.ForeignKey(Parent, related_name='question', on_delete=models.CASCADE)
+    subject = models.CharField(max_length=20, choices=SUBJECT_CHOICES) # 추천 질문 주제
+    recommaned_question = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.parent.name} 의 {self.subject}에 관한 추천 질문"
+
+
+class QuestionReason(models.Model):
+    question = models.ForeignKey(Question, related_name='question_reason', on_delete=models.CASCADE)
+    reason = models.TextField()
+
+    def __str__(self):
+        return f"{self.question.subject}에 관한 추천 질문에 대한 근거"
