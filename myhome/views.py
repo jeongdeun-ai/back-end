@@ -51,7 +51,7 @@ def update_user_settings(request):
     try:
         relation = UserParentRelation.objects.select_related('parent').get(user=user)
     except UserParentRelation.DoesNotExist:
-        return Response({'error' : "연결된 어르신 정보가 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Parent not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     user_serializer = UserSerializer(user, data=request.data.get('user', {}), partial=True)
     parent_serializer = ParentSerializer(relation.parent, data=request.data.get('parent', {}), partial=True)
@@ -84,7 +84,7 @@ def get_parent_user_info(request):
     try:
         relation = UserParentRelation.objects.select_related('user', 'parent').get(user=user)
     except UserParentRelation.DoesNotExist:
-        return Response({"detail": "어르신 정보가 연결되어 있지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Parent not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     parent = relation.parent
 
