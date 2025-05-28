@@ -127,7 +127,7 @@ class MedicationSchedule(models.Model):
     ]
 
     parent = models.ForeignKey(Parent, related_name='medication_schedule', on_delete=models.CASCADE)
-    time_slot = models.CharField(max_length=20, choices=TIME_SLOT_CHOICES)
+    time_slot = models.CharField(max_length=20, choices=TIME_SLOT_CHOICES) # ex) 오전 8:30
 
     class Meta:
         unique_together = ('parent', 'time_slot')  # Parent 당 각 시간대 1개만 존재

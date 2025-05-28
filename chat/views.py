@@ -130,6 +130,7 @@ def generate_reply_and_followup(parent, user_message):
 from django.utils.timezone import now
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def gpt_ask_parent(request):
     parent_id = request.data.get('parent_id')
 
@@ -178,7 +179,9 @@ def gpt_ask_parent(request):
 
 
 #2. Parent가 GPT에게 답변 → 답변 저장 + 핵심 정보 저장 View
+
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def parent_reply_to_gpt(request):
     parent_id = request.data.get('parent_id')
     audio_base64 = request.data.get('audio_base64')
