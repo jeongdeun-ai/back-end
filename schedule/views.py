@@ -75,3 +75,94 @@ def get_events_for_specific_date(request):
 
     return Response(serializer.data, status = status.HTTP_200_OK)
 
+
+
+# 3번 - User와 대응되는 Parent의 복약 일정 전부 가져오기! (GET)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_medicine_plan(request):
+    user = request.user
+
+    try:
+        relation = UserParentRelation.objects.get(user=user)
+        parent = relation.parent
+    except UserParentRelation.DoesNotExist:
+        return Response({"error": "해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
+
+    schedules = MedicationSchedule.objects.filter(parent=parent)
+    
+    result = []
+    for schedule in schedules:
+        items = schedule.medication_item.all()  # related_name='medication_item'
+        item_list = [
+            {
+                "name": item.name,
+                "dose": item.dose
+            } for item in items
+        ]
+        result.append({
+            "time_slot": schedule.time_slot,
+            "items": item_list
+        })
+
+    return Response(result, status=status.HTTP_200_OK)
+
+
+
+# 4번 - User가 자신의 Parent의 복약 일정 추가하기! (POST)
+# 복용약 정보 추가할 때 어떤 방식으로 할지 고민
+# 프론트로부터 받아야 할 때 이런식의 json으로 만들기 
+# {
+#   "schedules": [
+#     {
+#       "time_slot": "morning",
+#       "items": [
+#         {"name": "비타민C", "dose": "1정"},
+#         {"name": "감기약", "dose": "1정"}
+#       ]
+#     },
+#     {
+#       "time_slot": "lunch",
+#       "items": [
+#         {"name": "아미노산", "dose": "2포"},
+#         {"name": "감기약", "dose": "1정"}
+#       ]
+#     }
+#   ]
+# }
+@api_view(['POST']) # PUT, PATCH 따로 만들 필요 없이 이 view 하나로 끝내버리기!
+@permission_classes([IsAuthenticated])
+def add_medicine_items(request):
+    user = request.user
+    data = request.data
+
+    try:
+        relation = UserParentRelation.objects.get(user=user)
+        parent = relation.parent
+    except UserParentRelation.DoesNotExist:
+        return Response({'error': 'Parent not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    schedules = data.get("schedules", [])
+
+    for schedule_data in schedules:
+        time_slot = schedule_data.get("time_slot")
+        items = schedule_data.get("items", [])
+
+        # 기존 스케줄 삭제 (있으면)
+        MedicationSchedule.objects.filter(parent=parent, time_slot=time_slot).delete()
+
+        # MedicationSchedule 생성
+        schedule = MedicationSchedule.objects.create(
+            parent=parent,
+            time_slot=time_slot
+        )
+
+        # 각각의 약 저장
+        for item in items:
+            MedicationItem.objects.create(
+                medication_schedule=schedule,
+                name=item.get("name"),
+                dose=item.get("dose")
+            )
+
+    return Response({"message": "약 복용 스케줄 저장 완료"}, status=status.HTTP_201_CREATED)
