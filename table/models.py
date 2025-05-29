@@ -144,7 +144,7 @@ class MedicationItem(models.Model):
     def __str__(self):
         return f"{self.medication_schedule} - {self.name} {self.dose}"
 
-
+# AI 기반 질문 추천 서비스를 위한 모델 추가
 class Question(models.Model):
     SUBJECT_CHOICES = [
         ('main', '메인'),
@@ -157,14 +157,8 @@ class Question(models.Model):
     parent = models.ForeignKey(Parent, related_name='question', on_delete=models.CASCADE)
     subject = models.CharField(max_length=20, choices=SUBJECT_CHOICES) # 추천 질문 주제
     recommaned_question = models.CharField(max_length=100)
+    recommaned_reason = models.TextField() # 질문 추천 근거!
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.parent.name} 의 {self.subject}에 관한 추천 질문"
-
-
-class QuestionReason(models.Model):
-    question = models.ForeignKey(Question, related_name='question_reason', on_delete=models.CASCADE)
-    reason = models.TextField()
-
-    def __str__(self):
-        return f"{self.question.subject}에 관한 추천 질문에 대한 근거"
+        return f"{self.subject}에 관한 {self.parent.name}의 보호자를 위한 추천 질문"
