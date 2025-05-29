@@ -118,7 +118,7 @@ def get_daily_report_update(request):
       
     else:
     # 여긴 기존에 레포트가 있긴 한 것
-        
+
         todays_report.total_chat_time = total_chat_time
         todays_report.event_success_ratio = event_success_ratio
         todays_report.save() 
@@ -131,3 +131,54 @@ def get_daily_report_update(request):
             "task_success_rate": event_success_ratio,
             "emotion": current_emotion
         }, status=status.HTTP_200_OK)
+    
+
+# 2번 - parent 정보와 오늘 하루 일정 반환하기!
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_parent_event_info(request):
+    user = request.user
+    today_date = date.today().isoformat()  # 결과: '2025-05-27' 
+
+    try:
+        relation = UserParentRelation.objects.get(user=user)
+        parent = relation.parent
+    except UserParentRelation.DoesNotExist:
+        return Response({"error":"해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # parent 정보 반환할 것들!
+    parent_info = {
+        "name" : parent.name,
+        "photo_url": request.build_absolute_uri(parent.photo.url) if parent.photo else None,
+        "birth_date" : parent.birth_date,
+    }
+
+
+    # 일정 정보 
+    todays_events = Event.objects.filter(parent=parent, date=today_date).order_by('start_time') # 아래로 오름차순이 되도록 정렬
+
+    # 3. 일정 정보 구성
+    if not todays_events.exists():
+        event_info = {
+            "message": "오늘 등록된 일정이 없습니다."
+        }
+    else:
+        event_info = {
+            "events": [
+                {
+                    "title": event.title,
+                    "start_time": event.start_time.strftime("%H:%M"),
+                    "end_time": event.end_time.strftime("%H:%M") if event.end_time else None,
+                    "is_checked": event.is_checked
+                }
+                for event in todays_events
+            ]
+        }
+
+    # 4. 응답 반환
+    return Response({
+        "parent_info": parent_info,
+        "event_info": event_info
+    }, status=status.HTTP_200_OK)
+
+
