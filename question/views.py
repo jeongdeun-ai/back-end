@@ -24,6 +24,9 @@ import base64
 from datetime import date
 from django.utils.timezone import now
 
+load_dotenv()
+openai_api_key = os.getenv('OPENAI_API_KEY')
+
 # 1번 - Parent 객체의 ContextSummary와 오늘 대화 기록을 바탕으로 오늘의 AI 추천 질문을 생성해주는 api
 import json
 import re
@@ -39,14 +42,14 @@ def generate_recommend_question(request):
         relation = UserParentRelation.objects.get(user=user)
         parent = relation.parent
     except UserParentRelation.DoesNotExist:
-        return Response({"error": "해당 어르신 없음"}, status=404)
+        return Response({"error": "해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
 
     # 오늘 대화 수 확인
     chat_logs = ChatLog.objects.filter(parent=parent, created_at__date=today).order_by('created_at')
     chat_count_now = chat_logs.count()
 
     if chat_count_now == 0:
-        return Response({"error": "오늘 대화가 없습니다."}, status=400)
+        return Response({"error": "오늘 대화가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
     # 기존에 저장된 질문이 있으면 재활용
     existing_question = Question.objects.filter(parent=parent, created_at__date=today).order_by('-created_at').first()
@@ -54,13 +57,13 @@ def generate_recommend_question(request):
         return Response({
             "question": existing_question.recommaned_question,
             "reason": existing_question.recommaned_reason
-        }, status=200)
+        }, status=status.HTTP_200_OK)
 
     # ContextSummary 불러오기
     try:
         context = ContextSummary.objects.get(parent=parent).content
     except ContextSummary.DoesNotExist:
-        return Response({"error": "ContextSummary 없음"}, status=404)
+        return Response({"error": "ContextSummary 없음"}, status=status.HTTP_404_NOT_FOUND)
 
     # 대화 로그 텍스트화
     chat_text = "\n".join([f"{log.sender}: {log.message}" for log in chat_logs])
@@ -95,7 +98,7 @@ def generate_recommend_question(request):
         response = openai.ChatCompletion.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "너는 노인 대상 대화 보조 챗봇이야."},
+                {"role": "system", "content": "너는 노인의 감정과 맥락을 잘 이해하고 적절한 질문을 제안해주는 대화 도우미야."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7
@@ -109,7 +112,7 @@ def generate_recommend_question(request):
             if cleaned:
                 question_obj = json.loads(cleaned.group())
             else:
-                return Response({"error": "JSON 응답 형식 오류", "raw": content}, status=500)
+                return Response({"error": "JSON 응답 형식 오류", "raw": content}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # 질문 저장
         new_question = Question.objects.create(
@@ -122,7 +125,54 @@ def generate_recommend_question(request):
         return Response({
             "question": new_question.recommaned_question,
             "reason": new_question.recommaned_reason
-        }, status=201)
+        }, status=status.HTTP_201_CREATED)
 
     except Exception as e:
-        return Response({"error": "GPT 요청 실패", "detail": str(e)}, status=500)
+        return Response({"error": "GPT 요청 실패", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# 2번 User로부터 전달 받은 질문을 실제 parent-gpt 간의 대화에 질문 던지기!
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def direct_question_to_parent(request):
+
+    user = request.user
+    direct_question = request.data.get('direct_question')
+
+    if not direct_question:
+        return Response({"error": "질문 내용이 비어있습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        relation = UserParentRelation.objects.get(user=user)
+        parent = relation.parent
+    except UserParentRelation.DoesNotExist:
+        return Response({"error": "해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
+    
+
+    # TTS 변환 (OpenAI mp3)
+    try:
+        client = openai.OpenAI(api_key=openai_api_key)
+        tts_response = client.audio.speech.create(
+            model="tts-1",
+            voice="nova",
+            input=direct_question,
+            response_format="mp3",
+        )
+        audio_content = tts_response.read()
+        encoded_audio = base64.b64encode(audio_content).decode('utf-8')
+
+        # 질문 내용 발화 저장
+        ChatLog.objects.create(parent=parent, sender='gpt', message=direct_question)
+
+        return Response({
+            'question_text': direct_question,
+            'audio_base64': encoded_audio,
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({
+            "error": "TTS 변환 실패",
+            "detail": str(e),
+            "question_text": direct_question,
+            "audio_base64": None  # fallback
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
