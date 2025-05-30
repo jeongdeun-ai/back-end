@@ -33,7 +33,7 @@ import base64
 #         return Response({'error': 'User is not connected to any Parent.'}, status=status.HTTP_404_NOT_FOUND)
 
 #     data = {
-#         'user': user,
+#         'user_name': user,
 #         'parent': relation.parent,
 #         'relation_type': relation.relation_type,
 #         'ai_name_called': relation.ai_name_called,

@@ -117,6 +117,7 @@ class Event(models.Model):
     def __str__(self):
         return f"{self.title} ({self.date} {self.start_time})"
 
+
 # Parent의 약 복용 스케쥴 DB
 class MedicationSchedule(models.Model): 
     TIME_SLOT_CHOICES = [
@@ -144,21 +145,16 @@ class MedicationItem(models.Model):
     def __str__(self):
         return f"{self.medication_schedule} - {self.name} {self.dose}"
 
-# AI 기반 질문 추천 서비스를 위한 모델 추가
+
+# AI 기반 질문 추천 서비스를 위한 모델
 class Question(models.Model):
-    SUBJECT_CHOICES = [
-        ('main', '메인'),
-        ('mood', '기분'),
-        ('food', '식사'),
-        ('pill', '약'),
-        ('memory', '추억'),
-    ]
-    
     parent = models.ForeignKey(Parent, related_name='question', on_delete=models.CASCADE)
-    subject = models.CharField(max_length=20, choices=SUBJECT_CHOICES) # 추천 질문 주제
-    recommaned_question = models.CharField(max_length=100)
-    recommaned_reason = models.TextField() # 질문 추천 근거!
+    
+    recommaned_question = models.CharField(max_length=150)
+    recommaned_reason = models.TextField()  # GPT가 해당 질문을 추천한 이유
+    
+    chat_count = models.PositiveIntegerField()  # 이 질문이 생성될 당시의 대화 수
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.subject}에 관한 {self.parent.name}의 보호자를 위한 추천 질문"
+        return f"{self.parent.name}님의 보호자에게 추천된 질문: {self.recommaned_question}"
