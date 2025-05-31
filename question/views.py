@@ -25,7 +25,7 @@ from datetime import date
 from django.utils.timezone import now
 
 load_dotenv()
-openai_api_key = os.getenv('OPENAI_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # 1번 - Parent 객체의 ContextSummary와 오늘 대화 기록을 바탕으로 오늘의 AI 추천 질문을 생성해주는 api
 import json
@@ -132,11 +132,62 @@ def generate_recommend_question(request):
         return Response({"error": "GPT 요청 실패", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# 2번 User로부터 전달 받은 질문을 실제 parent-gpt 간의 대화에 질문 던지기!
+# # 2번 User로부터 전달 받은 질문을 실제 parent-gpt 간의 대화에 질문 던지기! (인코딩 - 디코딩 방식)
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def direct_question_to_parent(request):
+
+#     user = request.user
+#     direct_question = request.data.get('direct_question')
+
+#     if not direct_question:
+#         return Response({"error": "질문 내용이 비어있습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         relation = UserParentRelation.objects.get(user=user)
+#         parent = relation.parent
+#     except UserParentRelation.DoesNotExist:
+#         return Response({"error": "해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
+    
+
+#     client = OpenAI(api_key=openai_api_key)
+#     # TTS 변환 (OpenAI mp3)
+#     try:
+#         tts_response = client.audio.speech.create(
+#             model="tts-1",
+#             voice="nova",
+#             input=direct_question,
+#             response_format="mp3",
+#         )
+
+#         audio_content = tts_response.content
+#         encoded_audio = base64.b64encode(audio_content).decode('utf-8')
+
+#         # 질문 내용 발화 저장
+#         ChatLog.objects.create(parent=parent, sender='gpt', message=direct_question)
+
+#         return Response({
+#             'question_text': direct_question,
+#             'audio_base64': encoded_audio,
+#         }, status=status.HTTP_200_OK)
+
+#     except Exception as e:
+#         return Response({
+#             "error": "TTS 변환 실패",
+#             "detail": str(e),
+#             "question_text": direct_question,
+#             "audio_base64": None  # fallback
+#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# 2번 User로부터 전달 받은 질문을 실제 parent-gpt 간의 대화에 질문 던지기! (S3 저장소 방식)
+import boto3
+from django.conf import settings
+import uuid
+from django.core.files.base import ContentFile
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def direct_question_to_parent(request):
-
     user = request.user
     direct_question = request.data.get('direct_question')
 
@@ -148,26 +199,46 @@ def direct_question_to_parent(request):
         parent = relation.parent
     except UserParentRelation.DoesNotExist:
         return Response({"error": "해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
-    
 
-    # TTS 변환 (OpenAI mp3)
     try:
-        client = openai.OpenAI(api_key=openai_api_key)
+        # 1. TTS 변환
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         tts_response = client.audio.speech.create(
             model="tts-1",
             voice="nova",
             input=direct_question,
             response_format="mp3",
         )
-        audio_content = tts_response.read()
-        encoded_audio = base64.b64encode(audio_content).decode('utf-8')
+        audio_content = tts_response.content
 
-        # 질문 내용 발화 저장
+        # 2. UUID 기반 파일 이름 생성
+        filename = f"speech/{uuid.uuid4()}.mp3"
+
+        # 3. S3 직접 업로드
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+        )
+
+        s3.put_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=filename,
+            Body=audio_content,
+            ContentType='audio/mpeg',
+            # ACL='public-read'  # 🔥 중요: 퍼블릭 접근 허용
+        )
+
+        # 4. 퍼블릭 URL 생성
+        audio_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{filename}"
+
+        # 5. 질문 저장
         ChatLog.objects.create(parent=parent, sender='gpt', message=direct_question)
 
         return Response({
             'question_text': direct_question,
-            'audio_base64': encoded_audio,
+            'audio_url': audio_url,
         }, status=status.HTTP_200_OK)
 
     except Exception as e:
@@ -175,5 +246,5 @@ def direct_question_to_parent(request):
             "error": "TTS 변환 실패",
             "detail": str(e),
             "question_text": direct_question,
-            "audio_base64": None  # fallback
+            "audio_url": None
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

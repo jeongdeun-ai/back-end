@@ -4,6 +4,7 @@ from rest_framework import status
 from accounts.serializers import UserRegisterSingleUserRegisterSerializer
 
 from table.models import *
+from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from django.db import IntegrityError
@@ -20,6 +21,8 @@ openai_api_key = os.getenv('OPENAI_API_KEY')
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 # from .models import User
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -84,26 +87,44 @@ def register_parent_late(request):
 
 from storages.backends.s3boto3 import S3Boto3Storage
 # 회원가입할 때 아예 User 정보랑 Parent 정보 동시에 입력받고 연결까지 다 하는 API (얘로 사용)
+import boto3
+import uuid
+from django.core.files.uploadedfile import UploadedFile
+
 @api_view(['POST'])
 def register_user_and_parent_together(request):
     data = request.data
-
-    print("✅ request.FILES:", request.FILES)
-
-    # 뷰 내부
-    s3_storage = S3Boto3Storage()
-
     photo_file = request.FILES.get('parent_photo')
-    photo_file = request.FILES.get('parent_photo')
+
     if not photo_file:
         return Response({'error': 'parent_photo 파일이 필요합니다.'}, status=400)
 
-    photo_name = photo_file.name
-    photo_path_in_s3 = s3_storage.save(photo_name, photo_file)
-
     try:
+        # ✅ S3 클라이언트 생성
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+        )
+
+        # ✅ 파일명 생성
+        photo_filename = f"photos/{uuid.uuid4()}_{photo_file.name}"
+        # photo_filename = f"speech/{uuid.uuid4()}_{photo_file.name}"
+
+        # ✅ S3에 직접 업로드
+        s3.put_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=photo_filename,
+            Body=photo_file.read(),
+            ContentType=photo_file.content_type,
+            # ACL='public-read'  # ❌ 넣으면 안 됨
+        )
+
+        # ✅ URL 생성
+        photo_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{photo_filename}"
+
         with transaction.atomic():  
-            # User 생성
             user = User(
                 email=data.get('email'),
                 username=data.get('username'),
@@ -112,19 +133,17 @@ def register_user_and_parent_together(request):
             user.set_password(data.get('password'))
             user.save()
 
-            # Parent 생성
             parent = Parent.objects.create(
                 name=data.get('parent_name'),
                 birth_date=data.get('parent_birth_date'),
                 sex=data.get('parent_sex'),
-                photo=photo_path_in_s3,  # ✅ 경로 문자열로 저장됨
+                photo=photo_url,  # ✅ S3 URL 저장
                 address=data.get('parent_address', ''),
                 disease_info=data.get('parent_disease_info', ''),
                 medication_info=data.get('parent_medication_info', ''),
                 additional_notes=data.get('parent_additional_notes', ''),
             )
 
-            # Relation 생성
             UserParentRelation.objects.create(
                 user=user,
                 parent=parent,
@@ -132,7 +151,6 @@ def register_user_and_parent_together(request):
                 ai_name_called=data.get('ai_name_called')
             )
 
-            # 💡 ContextSummary에 초기 프로필 등록
             sex_display = parent.get_sex_display() if parent.sex else "성별 미상"
             initial_context = f"{parent.name}님은 {parent.birth_date}생 {sex_display}이며, " \
                             f"주요 질환은 {parent.disease_info}이며, 복용 중인 약은 {parent.medication_info}입니다. " \
@@ -144,5 +162,70 @@ def register_user_and_parent_together(request):
             )
 
             return Response({'message': '회원가입 + 부모 등록 + 초기 ContextSummary 저장 완료'}, status=status.HTTP_201_CREATED)
+    
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# from storages.backends.s3boto3 import S3Boto3Storage
+# # 회원가입할 때 아예 User 정보랑 Parent 정보 동시에 입력받고 연결까지 다 하는 API (얘로 사용)
+# @api_view(['POST'])
+# def register_user_and_parent_together(request):
+#     data = request.data
+
+#     print("✅ request.FILES:", request.FILES)
+
+#     # 뷰 내부
+#     s3_storage = S3Boto3Storage()
+
+#     photo_file = request.FILES.get('parent_photo')
+#     if not photo_file:
+#         return Response({'error': 'parent_photo 파일이 필요합니다.'}, status=400)
+
+#     photo_name = photo_file.name
+#     photo_path_in_s3 = s3_storage.save(photo_name, photo_file)
+
+#     try:
+#         with transaction.atomic():  
+#             # User 생성
+#             user = User(
+#                 email=data.get('email'),
+#                 username=data.get('username'),
+#                 phone_number=data.get('phone_number'),
+#             )
+#             user.set_password(data.get('password'))
+#             user.save()
+
+#             # Parent 생성
+#             parent = Parent.objects.create(
+#                 name=data.get('parent_name'),
+#                 birth_date=data.get('parent_birth_date'),
+#                 sex=data.get('parent_sex'),
+#                 photo=photo_path_in_s3,  # ✅ 경로 문자열로 저장됨
+#                 address=data.get('parent_address', ''),
+#                 disease_info=data.get('parent_disease_info', ''),
+#                 medication_info=data.get('parent_medication_info', ''),
+#                 additional_notes=data.get('parent_additional_notes', ''),
+#             )
+
+#             # Relation 생성
+#             UserParentRelation.objects.create(
+#                 user=user,
+#                 parent=parent,
+#                 relation_type=data.get('relation_type'),
+#                 ai_name_called=data.get('ai_name_called')
+#             )
+
+#             # 💡 ContextSummary에 초기 프로필 등록
+#             sex_display = parent.get_sex_display() if parent.sex else "성별 미상"
+#             initial_context = f"{parent.name}님은 {parent.birth_date}생 {sex_display}이며, " \
+#                             f"주요 질환은 {parent.disease_info}이며, 복용 중인 약은 {parent.medication_info}입니다. " \
+#                             f"참고사항: {parent.additional_notes}"
+
+#             ContextSummary.objects.create(
+#                 parent=parent,
+#                 content=initial_context
+#             )
+
+#             return Response({'message': '회원가입 + 부모 등록 + 초기 ContextSummary 저장 완료'}, status=status.HTTP_201_CREATED)
+#     except Exception as e:
+#         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
