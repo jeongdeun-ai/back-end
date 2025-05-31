@@ -32,7 +32,7 @@ def add_event_for_parent(request):
     user = request.user 
 
     # 프론트한테 받아야 하는 것
-    # title, date(YYYY-MM-DD), start_time(HH:MM:SS)
+    # title, date(YYYY-MM-DD), start_time(HH:MM:SS), end_time(HH:MM:SS)
     
     try:
         relation = UserParentRelation.objects.get(user=user)
@@ -51,7 +51,16 @@ def add_event_for_parent(request):
             end_time = data.get("end_time"),
         )
 
-        return Response({"message" : "새로운 일정이 추가되었습니다."}, status=status.HTTP_201_CREATED)
+        context = {
+            "message" : "새로운 일정이 추가되었습니다.",
+            "parent_name" : parent.name,
+            "title" : str(data.get('title')),
+            "date" : data.get('date'),
+            "start_time" : data.get("start_time"),
+            "end_time" : data.get("end_time"),
+        }
+
+        return Response(context, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -78,6 +87,34 @@ def get_events_for_specific_date(request):
 
 
 # 3번 - User와 대응되는 Parent의 복약 일정 전부 가져오기! (GET)
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def get_medicine_plan(request):
+#     user = request.user
+
+#     try:
+#         relation = UserParentRelation.objects.get(user=user)
+#         parent = relation.parent
+#     except UserParentRelation.DoesNotExist:
+#         return Response({"error": "해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
+
+#     schedules = MedicationSchedule.objects.filter(parent=parent)
+    
+#     result = []
+#     for schedule in schedules:
+#         items = schedule.medication_item.all()  # related_name='medication_item'
+#         item_list = [
+#             {
+#                 "name": item.name,
+#                 "dose": item.dose
+#             } for item in items
+#         ]
+#         result.append({
+#             "time_slot": schedule.time_slot,
+#             "items": item_list
+#         })
+
+#     return Response(result, status=status.HTTP_200_OK)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_medicine_plan(request):
@@ -90,10 +127,10 @@ def get_medicine_plan(request):
         return Response({"error": "해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
 
     schedules = MedicationSchedule.objects.filter(parent=parent)
-    
+
     result = []
     for schedule in schedules:
-        items = schedule.medication_item.all()  # related_name='medication_item'
+        items = schedule.medication_item.all()
         item_list = [
             {
                 "name": item.name,
@@ -105,8 +142,8 @@ def get_medicine_plan(request):
             "items": item_list
         })
 
-    return Response(result, status=status.HTTP_200_OK)
-
+    # ✅ 여기서 "schedules" 키로 감싸줌
+    return Response({"schedules": result}, status=status.HTTP_200_OK)
 
 
 # 4번 - User가 자신의 Parent의 복약 일정 추가하기! (POST)
