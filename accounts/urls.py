@@ -8,5 +8,5 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'), # 로그인 URL
     path('register-parent-late/',register_parent_late, name='register-parent-late'), # Parent만 따로 나중에 등록하는 경우
-    path('register-together/', register_user_and_parent_together, name='register-together'), # User-Parent 한번에 전체 다 등록!
+    path('register-user-and-parent-together/', register_user_and_parent_together, name='register-user-and-parent-together'), # User-Parent 한번에 전체 다 등록!
 ]  

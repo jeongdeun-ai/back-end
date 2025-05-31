@@ -94,11 +94,12 @@ def register_user_and_parent_together(request):
     s3_storage = S3Boto3Storage()
 
     photo_file = request.FILES.get('parent_photo')
+    photo_file = request.FILES.get('parent_photo')
+    if not photo_file:
+        return Response({'error': 'parent_photo 파일이 필요합니다.'}, status=400)
+
     photo_name = photo_file.name
-
-    # 강제 S3 업로드 → 경로(파일명)를 반환함
     photo_path_in_s3 = s3_storage.save(photo_name, photo_file)
-
 
     try:
         with transaction.atomic():  
@@ -132,9 +133,10 @@ def register_user_and_parent_together(request):
             )
 
             # 💡 ContextSummary에 초기 프로필 등록
-            initial_context = f"{parent.name}님은 {parent.birth_date}생 {parent.get_sex_display()}이며, " \
-                              f"주요 질환은 {parent.disease_info}이며, 복용 중인 약은 {parent.medication_info}입니다. " \
-                              f"참고사항: {parent.additional_notes}"
+            sex_display = parent.get_sex_display() if parent.sex else "성별 미상"
+            initial_context = f"{parent.name}님은 {parent.birth_date}생 {sex_display}이며, " \
+                            f"주요 질환은 {parent.disease_info}이며, 복용 중인 약은 {parent.medication_info}입니다. " \
+                            f"참고사항: {parent.additional_notes}"
 
             ContextSummary.objects.create(
                 parent=parent,
