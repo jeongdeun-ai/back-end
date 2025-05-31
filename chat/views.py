@@ -279,7 +279,7 @@ def gpt_ask_parent(request):
 
 
 client = OpenAI(api_key=openai_api_key)
-#2. Parent가 GPT에게 답변 → 답변 저장 + 핵심 정보 저장 View
+# 2. Parent가 GPT에게 답변 → 답변 저장 + 핵심 정보 저장 View (이건 디코딩 후 tts 방식)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def parent_reply_to_gpt(request):
@@ -358,3 +358,91 @@ def parent_reply_to_gpt(request):
         ContextSummary.objects.create(parent=parent, content=summary_text)
 
     return Response({"message": "응답이 정상적으로 저장되었습니다."}, status=status.HTTP_200_OK)
+
+
+# # 이거 실험용 코드!!(mp3 파일 자체를 받아서 하기)
+# from io import BytesIO
+# from django.utils.timezone import now
+# from rest_framework.decorators import api_view, permission_classes
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework.response import Response
+# from rest_framework import status
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def parent_reply_to_gpt(request):
+#     user = request.user
+#     audio_file = request.FILES.get("audio")  # mp3 파일
+
+#     # 1. 보호자와 연결된 어르신 찾기
+#     try:
+#         relation = UserParentRelation.objects.get(user=user)
+#         parent = relation.parent
+#     except UserParentRelation.DoesNotExist:
+#         return Response({'error': 'Parent not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+#     # 2. 파일을 BytesIO로 변환
+#     try:
+#         audio_bytes = audio_file.read()
+#         audio_stream = BytesIO(audio_bytes)
+#         audio_stream.name = "voice.mp3"  # Whisper API용 파일명 필수
+#     except Exception as e:
+#         return Response({'error': f'파일 처리 실패: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+#     # 3. Whisper STT 요청
+#     try:
+#         transcript_response = client.audio.transcriptions.create(
+#             model="whisper-1",
+#             file=audio_stream,
+#             response_format="text"
+#         )
+#         user_message = transcript_response.strip()
+#     except Exception as e:
+#         return Response({'error': f'STT failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#     # 4. 어르신 발화 저장
+#     ChatLog.objects.create(parent=parent, sender='parent', message=user_message)
+
+#     # 5. GPT 요약 요청
+#     system_prompt = f"""
+# 너는 치매 어르신과 대화하는 챗봇 AI야.
+
+# 아래는 어르신이 방금 한 발화야:
+# \"\"\"
+# {user_message}
+# \"\"\"
+
+# 너의 역할은 다음과 같아:
+# 1. 어르신의 발화 내용에서 **건강 상태**, **기분**, **식사 여부**, **복약 여부**와 관련된 **핵심 정보만** 추출한다.
+# 2. 발화가 장황하거나 반복되더라도, 중요한 내용만 뽑아 **간결하고 핵심적으로 요약**한다.
+# 3. **추측, 감정 유도, 의도 해석은 하지 않고**, 어르신이 말한 내용 그대로 요약한다.
+# 4. **말투는 제3자 보고 형식**으로 작성하며, 예를 들면 다음과 같다:
+#    - “기분이 우울하다고 하심”
+#    - “점심은 드시지 않았다고 함”
+#    - “약은 아직 복용하지 않으셨다고 함”
+# """
+
+#     try:
+#         response = client.chat.completions.create(
+#             model="gpt-4o",
+#             messages=[
+#                 {"role": "system", "content": system_prompt},
+#                 {"role": "user", "content": "어르신의 응답 내용을 요약해줘."}
+#             ],
+#             max_tokens=150,
+#             temperature=0.4,
+#         )
+#         summary_text = response.choices[0].message.content.strip()
+#     except Exception as e:
+#         return Response({'error': f'GPT 요약 실패: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#     # 6. ContextSummary 저장
+#     latest_context = ContextSummary.objects.filter(parent=parent).order_by('-created_at').first()
+#     if latest_context:
+#         latest_context.content = f"{latest_context.content.strip()}\n\n{summary_text}"
+#         latest_context.created_at = now()
+#         latest_context.save()
+#     else:
+#         ContextSummary.objects.create(parent=parent, content=summary_text)
+
+#     return Response({"message": "응답이 정상적으로 저장되었습니다."}, status=status.HTTP_200_OK)
