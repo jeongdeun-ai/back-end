@@ -30,6 +30,9 @@ class Parent(models.Model):
     medication_info = models.TextField(blank=True, null=True)
     additional_notes = models.TextField(blank=True, null=True)
 
+    def __str__(self):
+        return f"{self.name} 어르신"
+
 
 
 
