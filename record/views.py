@@ -13,7 +13,7 @@ from django.db import transaction
 # Open AI API 사용하기 위한 header
 import os
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -65,10 +65,18 @@ def summarize_chat_logs(parent, target_date):
     :param target_date: datetime.date 객체 (예: date.today())
     :return: 요약된 텍스트 (str) / 대화 없을 시 None 반환
     """
+    from datetime import datetime
+    # target_date가 str이라면 date 객체로 변환
+    if isinstance(target_date, str):
+        target_date = datetime.strptime(target_date, "%Y-%m-%d").date()
+
+
     chat_logs = ChatLog.objects.filter(
         parent=parent,
         timestamp__date=target_date
     ).order_by('timestamp')
+
+    print(f"📊 chat_logs count: {chat_logs.count()}")
 
     if not chat_logs.exists():
         print("대화 기록 없음")
@@ -78,23 +86,28 @@ def summarize_chat_logs(parent, target_date):
     content = ""
     for chat in chat_logs:
         sender_label = "어르신" if chat.sender == "parent" else "GPT"
-        content += f"{sender_label}: {chat.message}\n"
+        content += f"{sender_label}: {chat.message}\n\n"
 
     # GPT 요약 요청
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    
+    # 클라이언트 인스턴스 생성
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    # 요약 요청
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "다음은 하루 동안의 GPT와 사용자 대화입니다. 여기서 GPT와 대화하는 어르신에 중점을 둔 채로 전체 대화를 요약, 정리해주세요."},
                 {"role": "user", "content": content}
             ]
         )
-        summary = response['choices'][0]['message']['content']
-        print("요약 완료")
+        summary = response.choices[0].message.content
+        print("✅ 요약 완료")
         return summary
+
     except Exception as e:
-        print("요약 실패:", str(e))
+        print("❌ 요약 실패:", str(e))
         return None
 
 
@@ -103,7 +116,11 @@ def summarize_chat_logs(parent, target_date):
 @permission_classes([IsAuthenticated])
 def get_target_date_record(request):
     user = request.user
-    target_date = request.query_params.get('date')  # 예: '2025-05-27'
+
+    # 🔄 문자열로 받은 날짜를 datetime.date로 변환
+    target_date_str = request.query_params.get('date')  # 예: '2025-05-27'
+    target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+
 
     try:
         relation = UserParentRelation.objects.get(user=user)
@@ -132,9 +149,9 @@ def get_target_date_record(request):
     event_success_ratio = get_event_success_ratio(parent, target_date)
 
     # 4. 감정 추출 요청
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {
@@ -147,9 +164,9 @@ def get_target_date_record(request):
                 }
             ]
         )
-        emotion = response['choices'][0]['message']['content'].strip()
+        emotion = response.choices[0].message.content.strip()
 
-        # 5. 감정 결과 유효성 검사
+        # 유효성 검사
         allowed_emotions = {"happy", "sad", "anxious", "angry", "neutral"}
         if emotion not in allowed_emotions:
             print(f"GPT 감정 응답 '{emotion}' 은 유효하지 않아 'neutral'로 대체함")
@@ -184,7 +201,7 @@ def get_target_date_record(request):
     }, status=status.HTTP_201_CREATED)
 
   
-# 요약 레포트를 클릭했을 때 해당 target_date에 있었던 상세 페이지:모든 ChatLog 반환!
+# 2번 - 요약 레포트를 클릭했을 때 해당 target_date에 있었던 상세 페이지:모든 ChatLog 반환!
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_target_date_chat_logs(request):

@@ -34,8 +34,6 @@ class Parent(models.Model):
         return f"{self.name} 어르신"
 
 
-
-
 # 보호자와 어르신의 일대일 연결 관계 릴레이션
 class UserParentRelation(models.Model):
 
@@ -57,6 +55,9 @@ class UserParentRelation(models.Model):
             models.UniqueConstraint(fields=['user'], name='unique_user'),
             models.UniqueConstraint(fields=['parent'], name='unique_parent')
         ]
+    
+    def __str__(self):
+        return f"{self.user.username}과 {self.parent.name}의 관계 릴레이션"
 
 # 채팅 기록 릴레이션
 class ChatLog(models.Model):
@@ -72,6 +73,8 @@ class ChatLog(models.Model):
     message = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True) # 여긴 연-월-일-시-분-초 다 포함되어있는 정보
 
+    def __str__(self):
+        return f"sender: {self.sender} / {self.parent.name}와 GPT의 대화"
 
 # 데일리 리포트 요약 릴레이션
 class DailyReport(models.Model):
