@@ -138,8 +138,7 @@ def get_daily_report_update(request):
 @permission_classes([IsAuthenticated])
 def get_parent_event_info(request):
     user = request.user
-    today_date = date.today().isoformat()  # 결과: '2025-05-27' 
-
+    today_date = date.today().isoformat()  # 오늘 날짜!!
     try:
         relation = UserParentRelation.objects.get(user=user)
         parent = relation.parent
@@ -152,7 +151,7 @@ def get_parent_event_info(request):
         "photo_url": request.build_absolute_uri(parent.photo.url) if parent.photo else None,
         "birth_date" : parent.birth_date,
     }
-
+ 
 
     # 일정 정보 
     todays_events = Event.objects.filter(parent=parent, date=today_date).order_by('start_time') # 아래로 오름차순이 되도록 정렬
