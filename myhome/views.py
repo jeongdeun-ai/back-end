@@ -42,7 +42,7 @@ import base64
 #     serializer = UserWithParentSerializer(data)
 #     return Response(serializer.data, status=status.HTTP_200_OK)
 
-# 2번 - User가 '설정' 페이지에서 정보들을 일부 수정할 때
+# 1번 - User가 '설정' 페이지에서 정보들을 일부 수정할 때
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def update_user_settings(request):
@@ -75,7 +75,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-
+# 2번 - User가 '설정' 페이지에 들어갔을 때 본인과 parent의 정보들을 보내는 get 메서드
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_parent_user_info(request):
