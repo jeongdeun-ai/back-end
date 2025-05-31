@@ -13,7 +13,7 @@ from django.db import transaction
 # Open AI API 사용하기 위한 header
 import os
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -44,8 +44,8 @@ def generate_recommend_question(request):
     except UserParentRelation.DoesNotExist:
         return Response({"error": "해당 어르신 없음"}, status=status.HTTP_404_NOT_FOUND)
 
-    # 오늘 대화 수 확인
-    chat_logs = ChatLog.objects.filter(parent=parent, created_at__date=today).order_by('created_at')
+    # 오늘 대화 수 확인 
+    chat_logs = ChatLog.objects.filter(parent=parent, timestamp__date=today).order_by('timestamp')
     chat_count_now = chat_logs.count()
 
     if chat_count_now == 0:
@@ -92,10 +92,11 @@ def generate_recommend_question(request):
     {chat_text}
     """
     """
+    
 
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "너는 노인의 감정과 맥락을 잘 이해하고 적절한 질문을 제안해주는 대화 도우미야."},
@@ -103,7 +104,7 @@ def generate_recommend_question(request):
             ],
             temperature=0.7
         )
-        content = response['choices'][0]['message']['content'].strip()
+        content = response.choices[0].message.content.strip()
 
         try:
             question_obj = json.loads(content)
