@@ -357,7 +357,7 @@ def parent_reply_to_gpt(request):
     else:
         ContextSummary.objects.create(parent=parent, content=summary_text)
 
-    return Response({"message": "응답이 정상적으로 저장되었습니다."}, status=status.HTTP_200_OK)
+    return Response({"message": "응답이 정상적으로 저장되었습니다."}, status=status.HTTP_201_CREATED)
 
 
 # # 이거 실험용 코드!!(mp3 파일 자체를 받아서 하기)
