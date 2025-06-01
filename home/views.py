@@ -171,7 +171,8 @@ def get_parent_event_info(request):
                     "title": event.title,
                     "start_time": event.start_time.strftime("%H:%M"),
                     "end_time": event.end_time.strftime("%H:%M") if event.end_time else None,
-                    "is_checked": event.is_checked
+                    "is_checked": event.is_checked,
+                    "event_type":event.event_type,
                 }
                 for event in todays_events
             ]
