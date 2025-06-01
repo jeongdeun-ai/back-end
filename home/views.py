@@ -71,6 +71,7 @@ def get_daily_report_update(request):
         if summarized_text is None:
             print("GPT 요약 실패: 대화 없음 또는 오류")
             return Response({"error": "요약 생성 실패 (대화 없음 또는 GPT 오류)"}, status=status.HTTP_400_BAD_REQUEST)
+        print("summarized text 성공?")
 
         openai.api_key = os.getenv("OPENAI_API_KEY")
         try:
