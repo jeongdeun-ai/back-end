@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     #######
     'corsheaders',
     'storages',
+    'django_extensions', # 이거 DB 시각화 하는 것! 어플
 ]
 
 MIDDLEWARE = [
