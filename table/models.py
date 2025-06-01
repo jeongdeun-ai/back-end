@@ -106,6 +106,11 @@ class ContextSummary(models.Model):
 
 # 일정(Event) 모델 - Parent(보호자) 기준
 class Event(models.Model):
+
+    EVENT_TYPE_CHOICES = [
+        ('normal', '일반 일정'),
+        ('hospital', '병원 일정'),
+    ]
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='event')
     
     title = models.CharField(max_length=200)  # 일정 제목
@@ -116,12 +121,18 @@ class Event(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     is_checked = models.BooleanField(default=False) # 일정 완료 여부 기본값 False
+
+    event_type = models.CharField(
+        max_length=20,
+        choices=EVENT_TYPE_CHOICES,
+        default='normal',  # 기본값은 일반 일정
+    )
     class Meta:
         ordering = ['date', 'start_time']
         unique_together = ('parent', 'date', 'start_time', 'title')  # 같은 시간 같은 제목 중복 방지
 
     def __str__(self):
-        return f"{self.title} ({self.date} {self.start_time})"
+        return f"{self.title} ({self.date} {self.start_time})- {self.get_event_type_display()}"
 
 
 # Parent의 약 복용 스케쥴 DB
