@@ -179,7 +179,7 @@ def generate_recommend_question(request):
 #             "audio_base64": None  # fallback
 #         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# 2번 User로부터 전달 받은 질문을 실제 parent-gpt 간의 대화에 질문 던지기! (S3 저장소 방식)
+# 2번 - User로부터 전달 받은 질문을 실제 parent-gpt 간의 대화에 질문 던지기! (S3 저장소 방식)
 import boto3
 from django.conf import settings
 import uuid
