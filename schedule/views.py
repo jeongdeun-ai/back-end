@@ -49,6 +49,7 @@ def add_event_for_parent(request):
             date = data.get("date"),
             start_time = data.get("start_time"),
             end_time = data.get("end_time"),
+            event_type = data.get("event_type"),
         )
 
         context = {
@@ -58,6 +59,7 @@ def add_event_for_parent(request):
             "date" : data.get('date'),
             "start_time" : data.get("start_time"),
             "end_time" : data.get("end_time"),
+            "event_type" : data.get("event_type"),
         }
 
         return Response(context, status=status.HTTP_201_CREATED)
