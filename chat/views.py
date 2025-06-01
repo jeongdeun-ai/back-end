@@ -175,7 +175,7 @@ def gpt_ask_parent(request):
 
     # TTS 변환 (최신 SDK 방식)
     try:
-        client = OpenAI(api_key=openai_api_key)
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         tts_response = client.audio.speech.create(
             model="tts-1",
             voice="nova",
