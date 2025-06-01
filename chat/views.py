@@ -31,9 +31,6 @@ openai_api_key = os.getenv('OPENAI_API_KEY')
 
 # gpt에게 Parent 객체의 핵심 정보를 넘겨주고 가장 적절한 질문 텍스트 생성하는 함수
 def generate_initial_question(parent):
-    """
-    GPT가 Parent에게 할 적절한 질문을 생성하되, 어르신에 대한 정보를 바탕으로 맞춤형으로 설계함.
-    """
     try:
         latest_context = parent.context_summary.latest('created_at')
         context_text = latest_context.content
@@ -68,11 +65,19 @@ def generate_initial_question(parent):
             max_tokens=200,
             temperature=0.7,
         )
+        question_text = response.choices[0].message.content.strip()
+
+        if not question_text:
+            return None
+        elif len(question_text) > 4000:
+            question_text = question_text[:4000]
+
+        return question_text
+
     except Exception as e:
-        return Response()
+        print("GPT 오류:", e)
+        return None
 
-
-    return response.choices[0].message.content
 
 # 2. 어르신 응답 → 그에 대한 GPT 반응 생성
 def generate_reply_and_followup(parent, user_message):
@@ -279,7 +284,7 @@ def gpt_ask_parent(request):
 
 
 client = OpenAI(api_key=openai_api_key)
-# 2. Parent가 GPT에게 답변 → 답변 저장 + 핵심 정보 저장 View (이건 디코딩 후 tts 방식)
+# 2. Parent가 GPT에게 답변 → 답변 저장 + 핵심 정보 저장 View (이건 tts 이후 mp3 인코딩하여 반환)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def parent_reply_to_gpt(request):

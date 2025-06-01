@@ -133,7 +133,7 @@ def get_daily_report_update(request):
         }, status=status.HTTP_200_OK)
     
 
-# 2번 - parent 정보와 오늘 하루 일정 반환하기!
+# 2번 - parent 신상 정보와 오늘 하루 일정 반환하기!
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_parent_event_info(request):

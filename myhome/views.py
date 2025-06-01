@@ -75,7 +75,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-# 2번 - User가 '설정' 페이지에 들어갔을 때 본인과 parent의 정보들을 보내는 get 메서드
+# 2번 - User가 '설정' 페이지에 들어갔을 때, User와 Parent의 신상 정보 반환하는 API
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_parent_user_info(request):
