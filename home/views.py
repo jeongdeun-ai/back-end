@@ -32,6 +32,7 @@ from datetime import date
 from table.models import ChatLog
 import openai
 from django.utils.timezone import now
+from openai import OpenAI
 
 ## import 해올 것들 리스트 ##
 
@@ -73,9 +74,10 @@ def get_daily_report_update(request):
             return Response({"error": "요약 생성 실패 (대화 없음 또는 GPT 오류)"}, status=status.HTTP_400_BAD_REQUEST)
         print("summarized text 성공?")
 
-        openai.api_key = os.getenv("OPENAI_API_KEY")
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
         try:
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {
@@ -88,7 +90,7 @@ def get_daily_report_update(request):
                     }
                 ]
             )
-            emotion = response['choices'][0]['message']['content'].strip()
+            emotion = response.choices[0].message.content.strip()
 
             # 5. 감정 결과 유효성 검사
             allowed_emotions = {"happy", "sad", "anxious", "angry", "neutral"}
