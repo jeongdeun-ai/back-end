@@ -206,3 +206,7 @@ AWS_S3_FILE_OVERWRITE = False
 # }
 AWS_DEFAULT_ACL = 'public-read'
 
+# CSRF 관련 설정 (Cloudtype에서 배포된 URL을 신뢰할 수 있도록 설정)
+CSRF_TRUSTED_ORIGINS = [
+    'https://port-0-jeongdeun-ai-server-mbd6dyu0ac9aa005.sel4.cloudtype.app'
+]
