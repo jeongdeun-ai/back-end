@@ -103,6 +103,9 @@ class ContextSummary(models.Model):
     content = models.TextField()  # GPT가 참고할 핵심 요약 내용
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.parent.name}어르신의 맥락정보"
+
 
 # 일정(Event) 모델 - Parent(보호자) 기준
 class Event(models.Model):
