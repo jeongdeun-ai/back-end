@@ -96,6 +96,9 @@ class DailyReport(models.Model):
     event_success_ratio = models.IntegerField(default=0) # 일정 수행률 (%)
     parent_emotion = models.CharField(max_length=20, choices=EMOTION_CHOICES, default='neutral')
 
+    def __str__(self):
+        return f"{self.parent.name}어르신 {self.date} 데일리 리포트"
+
 
 # GPT API시 전달할 핵심 문맥 요약 릴레이션
 class ContextSummary(models.Model):
